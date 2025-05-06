@@ -1,11 +1,95 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { motion } from "framer-motion"
+import { motion, AnimatePresence } from "framer-motion"
 import { ChevronDown, Brain, Users, Bot, Database, ArrowRight, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import Link from "next/link"
+
+// Component for animated background particles
+const BackgroundParticles = ({ count = 20 }) => {
+  const particles = Array.from({ length: count }).map((_, i) => ({
+    id: i,
+    size: Math.random() * 10 + 5,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    duration: Math.random() * 20 + 10,
+    delay: Math.random() * 5,
+  }));
+
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {particles.map((particle) => (
+        <motion.div
+          key={particle.id}
+          className="absolute rounded-full bg-purple-200 opacity-30"
+          style={{
+            width: particle.size,
+            height: particle.size,
+            left: `${particle.x}%`,
+            top: `${particle.y}%`,
+          }}
+          animate={{
+            x: [0, Math.random() * 100 - 50, 0],
+            y: [0, Math.random() * 100 - 50, 0],
+          }}
+          transition={{
+            duration: particle.duration,
+            repeat: Infinity,
+            ease: "easeInOut",
+            delay: particle.delay,
+          }}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Component for background wave animation
+const BackgroundWave = () => {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      <motion.div
+        className="absolute w-full h-[800px] -bottom-[300px] left-0 opacity-10"
+        style={{
+          background: "radial-gradient(ellipse at center, rgba(138,43,226,1) 0%, rgba(138,43,226,0) 70%)",
+        }}
+        animate={{
+          scale: [1, 1.2, 1],
+          rotate: [0, 10, 0],
+          opacity: [0.1, 0.15, 0.1],
+        }}
+        transition={{
+          duration: 20,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+    </div>
+  );
+};
+
+// Component for animated gradient background
+const AnimatedGradient = () => {
+  return (
+    <motion.div
+      className="absolute inset-0 pointer-events-none opacity-5"
+      animate={{
+        background: [
+          "linear-gradient(45deg, #8a2be2 0%, #ff69b4 100%)",
+          "linear-gradient(45deg, #9400d3 0%, #4b0082 100%)",
+          "linear-gradient(45deg, #8a2be2 0%, #ff69b4 100%)",
+        ],
+      }}
+      transition={{
+        duration: 10,
+        repeat: Infinity,
+        ease: "easeInOut",
+      }}
+    />
+  );
+};
 
 export default function Home() {
   const [isVisible, setIsVisible] = useState(false);
@@ -30,7 +114,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white relative">
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
@@ -63,8 +147,10 @@ export default function Home() {
       </header>
 
       {/* Section 1 - Hero */}
-      <section id="home" className="py-20 bg-gradient-to-br from-purple-50 to-white">
-        <div className="container mx-auto px-4">
+      <section id="home" className="py-20 bg-gradient-to-br from-purple-50 to-white relative overflow-hidden">
+        <BackgroundParticles count={15} />
+        <BackgroundWave />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="flex flex-col md:flex-row items-center justify-between"
             initial="hidden"
@@ -130,8 +216,9 @@ export default function Home() {
       </section>
 
       {/* Section 2 - About Us */}
-      <section id="about" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
+      <section id="about" className="py-20 bg-white relative">
+        <AnimatedGradient />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -199,8 +286,9 @@ export default function Home() {
       </section>
 
       {/* Section 3 - Features */}
-      <section id="features" className="py-20 bg-gradient-to-br from-purple-50 to-white">
-        <div className="container mx-auto px-4">
+      <section id="features" className="py-20 bg-gradient-to-br from-purple-50 to-white relative">
+        <BackgroundParticles count={10} />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -292,8 +380,9 @@ export default function Home() {
       </section>
 
       {/* Section 4 - Bot Functionality */}
-      <section id="bot" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
+      <section id="bot" className="py-20 bg-white relative">
+        <AnimatedGradient />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -428,8 +517,9 @@ export default function Home() {
       </section>
 
       {/* Section 5 - Additional Content */}
-      <section id="contact" className="py-20 bg-gradient-to-br from-purple-50 to-white">
-        <div className="container mx-auto px-4">
+      <section id="contact" className="py-20 bg-gradient-to-br from-purple-50 to-white relative">
+        <BackgroundWave />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -509,8 +599,9 @@ export default function Home() {
       </section>
 
       {/* Section 6 - Blog Section */}
-      <section id="blog" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
+      <section id="blog" className="py-20 bg-white relative">
+        <BackgroundParticles count={8} />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -631,8 +722,9 @@ export default function Home() {
       </section>
 
       {/* Section 7 - Case Studies */}
-      <section id="case-studies" className="py-20 bg-gradient-to-br from-purple-50 to-white">
-        <div className="container mx-auto px-4">
+      <section id="case-studies" className="py-20 bg-gradient-to-br from-purple-50 to-white relative">
+        <AnimatedGradient />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
@@ -722,8 +814,9 @@ export default function Home() {
       </section>
 
       {/* Section 8 - Support */}
-      <section id="support-section" className="py-20 bg-white">
-        <div className="container mx-auto px-4">
+      <section id="support-section" className="py-20 bg-white relative">
+        <BackgroundParticles count={12} />
+        <div className="container mx-auto px-4 relative z-10">
           <motion.div 
             className="text-center mb-16"
             initial={{ opacity: 0, y: 20 }}
