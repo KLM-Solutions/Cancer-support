@@ -84,7 +84,7 @@ export default function Home() {
               </p>
               <div className="flex space-x-4">
                 <Link href="/cancer-page">
-                  <Button className="bg-purple-600 hover:bg-purple-700">
+                  <Button className="bg-purple-600 text-white hover:bg-purple-700">
                     Get Started
                   </Button>
                 </Link>
@@ -485,7 +485,7 @@ export default function Home() {
                     </li>
                   </ul>
                   <Link href="/demo-request">
-                    <Button className="bg-purple-600 hover:bg-purple-700 w-full">
+                    <Button className="bg-purple-600 text-white hover:bg-purple-700 w-full">
                       Request a Demo
                     </Button>
                   </Link>
@@ -496,7 +496,7 @@ export default function Home() {
                     <h3 className="text-2xl font-bold mb-4">Contact Us</h3>
                     <p className="mb-6">Have questions about our cancer classification system?</p>
                     <Link href="/support">
-                      <Button variant="outline" className="border-white text-purple-600 hover:bg-purple-700 hover:text-white hover:border-transparent">
+                      <Button variant="outline" className="border-white text-purple-600 text-white hover:bg-purple-700 hover:text-white hover:border-transparent">
                         Get in Touch <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
@@ -777,7 +777,7 @@ export default function Home() {
                 
                 <div className="mt-8">
                   <Link href="/support">
-                    <Button className="bg-purple-600 hover:bg-purple-700 w-full">
+                    <Button className="bg-purple-600 text-white hover:bg-purple-700 w-full">
                       Visit Support Center
                     </Button>
                   </Link>

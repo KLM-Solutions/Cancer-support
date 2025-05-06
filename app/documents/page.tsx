@@ -404,7 +404,7 @@ export default function Documents() {
               </Button>
             </Link>
             <Link href="/support">
-              <Button variant="outline" className="border-white text-purple-600 hover:bg-purple-700 hover:text-white hover:border-transparent">
+              <Button variant="outline" className="border-white text-purple-600 text-white hover:bg-purple-700 hover:text-white hover:border-transparent">
                 Contact Sales
               </Button>
             </Link>
