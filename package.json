@@ -12,7 +12,9 @@
     "@ai-sdk/openai": "^1.1.14",
     "ai": "^4.1.46",
     "dotenv": "^16.4.7",
+    "framer-motion": "^12.9.7",
     "latest": "^0.2.0",
+    "lucide-react": "^0.507.0",
     "next": "15.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -26,6 +28,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
+    "tw-animate-css": "^1.2.9",
     "typescript": "^5"
   }
 }

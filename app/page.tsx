@@ -1,927 +1,919 @@
 "use client"
-import { useState, useRef, useEffect } from "react"
-import type React from "react"
 
-import Head from "next/head"
-import { useChat } from "@ai-sdk/react"
-import { IoArrowUpOutline, IoAttachOutline, IoSearchOutline } from "react-icons/io5"
-import { FaWandMagicSparkles } from "react-icons/fa6"
-import { IoHomeOutline } from "react-icons/io5"
-import { BiLibrary } from "react-icons/bi"
-import { MdOutlineWork } from "react-icons/md"
-import { IoInformationCircleOutline } from "react-icons/io5"
-import { MdSettingsApplications } from "react-icons/md"
-import { MdSupport } from "react-icons/md"
-import { IoShareSocialOutline } from "react-icons/io5"
-import { RiSparklingLine } from "react-icons/ri"
-import { BsThreeDots } from "react-icons/bs"
-import { IoCloseOutline } from "react-icons/io5"
-import ReactMarkdown from "react-markdown"
-import { HowToUseModal } from "./components/how-to-use-modal"
-import { SettingsModal } from "./components/settings-modal"
-import { SupportChat } from "./components/support-chat"
-import { ShareAndGetPaid } from "./components/share-and-get-paid"
-import { Library } from "./components/library"
-import { WorkflowModal } from "./components/workflow-modal"
+import { useState, useEffect } from "react"
+import { motion } from "framer-motion"
+import { ChevronDown, Brain, Users, Bot, Database, ArrowRight, Clock } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import Link from "next/link"
 
-interface Annotation {
-  sources?: { url: string; title?: string }[] // Define the structure of sources
-}
-
-interface Message {
-  id: string
-  role: string
-  content: string
-  annotations?: Annotation // Use the defined interface
-}
-
-export default function Chat() {
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat()
-  const [isTyping, setIsTyping] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement | null>(null)
-  const [isMobileView, setIsMobileView] = useState(false)
-  const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false)
-  const [upgradeModalAnimation, setUpgradeModalAnimation] = useState("")
-  const [isHowToUseModalOpen, setIsHowToUseModalOpen] = useState(false)
-  const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false)
-  const [isSupportChatOpen, setIsSupportChatOpen] = useState(false)
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false)
-  const [isLibraryOpen, setIsLibraryOpen] = useState(false)
-  const [isWorkflowOpen, setIsWorkflowOpen] = useState(false)
-  const [workflowContent, setWorkflowContent] = useState("")
+export default function Home() {
+  const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    // Check if screen is mobile size
-    const checkMobileView = () => {
-      setIsMobileView(window.innerWidth < 768)
-    }
+    setIsVisible(true);
+  }, []);
 
-    // Initial check
-    checkMobileView()
+  const fadeIn = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 }
+  };
 
-    // Add event listener for window resize
-    window.addEventListener("resize", checkMobileView)
-
-    // Cleanup
-    return () => window.removeEventListener("resize", checkMobileView)
-  }, [])
-
-  useEffect(() => {
-    // Update typing indicator based on loading state
-    setIsTyping(isLoading)
-
-    // Scroll to the bottom when messages change, only if user is at the bottom
-    if (messagesEndRef.current) {
-      const isAtBottom = messagesEndRef.current.getBoundingClientRect().bottom <= window.innerHeight
-      if (isAtBottom) {
-        ;(messagesEndRef.current as HTMLElement).scrollIntoView({ behavior: "smooth" })
+  const staggerContainer = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2
       }
     }
-  }, [messages, isLoading])
+  };
 
-  // Handle form submission
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    if (input.trim()) {
-      handleSubmit(e as unknown as React.FormEvent<HTMLFormElement>)
-    }
-  }
-
-  // Handle key press in input
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault()
-      onSubmit(e as unknown as React.FormEvent<HTMLFormElement>)
-    }
-  }
-
-  const handleButtonClick = (action: string) => {
-    if (action === "Rewrite") {
-      // Logic to pass the previous query to the LLM
-      handleInputChange({ target: { value: input } } as React.ChangeEvent<HTMLInputElement>)
-      const submitEvent = new Event("submit", { bubbles: true })
-      document.querySelector("form")?.dispatchEvent(submitEvent)
-    } else if (action === "Take Notes") {
-      // Logic to download the previous query and response as a text file
-      // Find the last user message (query) and the last assistant message (response)
-      let userMessage = ""
-      let assistantMessage = ""
-
-      // Loop from the end to find the last user and assistant messages
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === "user" && !userMessage) {
-          userMessage = messages[i].content
-        }
-        if (messages[i].role === "assistant" && !assistantMessage) {
-          assistantMessage = messages[i].content
-        }
-        if (userMessage && assistantMessage) break // Stop once we have both
-      }
-
-      // Create content with both the query and response
-      const notesContent = `Query: ${userMessage}
-
-Response: ${assistantMessage}`
-
-      // Create and download the file
-      const blob = new Blob([notesContent], { type: "text/plain" })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = "notes.txt"
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
-    } else if (action === "Create Workflow") {
-      // Find the last assistant message to use as initial content
-      let assistantMessage = ""
-      for (let i = messages.length - 1; i >= 0; i--) {
-        if (messages[i].role === "assistant") {
-          assistantMessage = messages[i].content
-          break
-        }
-      }
-      setWorkflowContent(assistantMessage)
-      setIsWorkflowOpen(true)
-    } else {
-      // For action buttons like Research, Brainstorm, etc.
-      // Set the input value and immediately submit
-      handleInputChange({ target: { value: action } } as React.ChangeEvent<HTMLInputElement>)
-
-      // Immediately submit the form after setting the input
-      setTimeout(() => {
-        handleSubmit({ preventDefault: () => {} } as React.FormEvent<HTMLFormElement>)
-      }, 0)
-    }
-  }
-
-  // Function to open the upgrade modal with animation
-  const openUpgradeModal = () => {
-    setIsUpgradeModalOpen(true)
-    setTimeout(() => {
-      setUpgradeModalAnimation("translate-y-0 opacity-100")
-    }, 10)
-  }
-
-  // Function to close the upgrade modal with animation
-  const closeUpgradeModal = () => {
-    setUpgradeModalAnimation("translate-y-4 opacity-0")
-    setTimeout(() => {
-      setIsUpgradeModalOpen(false)
-    }, 300)
-  }
-
-  // Toggle support chat
-  const toggleSupportChat = () => {
-    setIsSupportChatOpen(!isSupportChatOpen)
-  }
-
-  // Toggle library
-  const toggleLibrary = () => {
-    setIsLibraryOpen(!isLibraryOpen)
-  }
-
-  // Toggle workflow
-  const toggleWorkflow = () => {
-    setIsWorkflowOpen(!isWorkflowOpen)
-  }
-
-  // Mobile View Layout
-  if (isMobileView) {
-    return (
-      <>
-        <Head>
-          <style>{`
-            .toggle-checkbox:checked {
-              right: 0;
-              border-color: #805AD5;
-            }
-            .toggle-checkbox:checked + .toggle-label {
-              background-color: #805AD5;
-            }
-          `}</style>
-        </Head>
-        <div className="flex flex-col h-screen bg-gray-50">
-          {/* Main Content */}
-          <div className="flex-1 flex flex-col">
-            {/* Chat Area */}
-            <div className="flex-1 p-4 overflow-y-auto">
-              {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <h1 className="text-2xl font-semibold text-gray-800 mb-4 text-center">
-                    What can I help you with, Rasheq?
-                  </h1>
-
-                  <div className="flex items-center justify-between w-full mb-2 px-2">
-                    <div className="flex items-center text-xs text-gray-500">
-                      <span className="mr-1">1/10 monthly credits used</span>
-                    </div>
-                    <button
-                      className="flex items-center justify-center py-1 px-4 bg-purple-500 text-white rounded-full text-sm hover:bg-purple-600 hover:text-white"
-                      onClick={openUpgradeModal}
-                    >
-                      <RiSparklingLine className="mr-1" />
-                      Upgrade
-                    </button>
-                  </div>
-
-                  <div className="w-full mb-2 px-2">
-                    <div className="w-full bg-gray-200 rounded-full h-1">
-                      <div className="bg-purple-500 h-1 rounded-full" style={{ width: "10%" }}></div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-lg shadow-sm w-full mb-4 p-3">
-                    <div className="flex mb-2">
-                      <button className="flex-1 flex items-center justify-center py-2 px-3 border border-gray-300 rounded-lg text-sm mr-1">
-                        <span className="inline-block w-5 h-5 mr-1 bg-green-500 rounded-md flex items-center justify-center text-white text-xs">
-                          G
-                        </span>
-                        GPT-4o Mini
-                      </button>
-                      <button className="flex-1 flex items-center justify-center py-2 px-3 border border-gray-300 rounded-lg text-sm ml-1">
-                        <span className="inline-block w-5 h-5 mr-1 bg-black rounded-md flex items-center justify-center text-white text-xs">
-                          A
-                        </span>
-                        Auto-detect
-                      </button>
-                    </div>
-
-                    <div className="text-gray-600 mb-2 text-center">Chat with Videos</div>
-
-                    <form className="flex items-center mb-2 gap-1">
-                      <button
-                        type="button"
-                        className="flex-1 flex items-center justify-center py-2 px-2 border border-gray-300 rounded-lg text-sm"
-                      >
-                        <IoAttachOutline className="mr-1 sm:mr-2" />
-                        <span className="hidden xs:inline">Attach</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="flex-1 flex items-center justify-center py-2 px-2 border border-gray-300 rounded-lg text-sm"
-                      >
-                        <IoSearchOutline className="mr-1 sm:mr-2" />
-                        <span className="hidden xs:inline">Search</span>
-                      </button>
-                      <button
-                        type="button"
-                        className="w-10 flex items-center justify-center py-2 px-2 border border-gray-300 rounded-lg text-sm"
-                      >
-                        <RiSparklingLine />
-                      </button>
-                    </form>
-
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={handleInputChange}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Message CTC Generation Engine..."
-                      className="w-full border border-gray-300 rounded-lg py-3 px-4 focus:outline-none focus:ring-2 focus:ring-purple-500 mb-2"
-                    />
-
-                    <button type="button" className="p-2 text-gray-500 absolute right-8 bottom-28">
-                      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path
-                          d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M12 16V12"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                        <path
-                          d="M12 8H12.01"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </button>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 w-full px-2">
-                    <button
-                      className="flex-1 min-w-[45%] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                      onClick={() => handleButtonClick("Research")}
-                    >
-                      <IoSearchOutline className="mr-1 flex-shrink-0" />
-                      <span className="truncate">Research</span>
-                    </button>
-                    <button
-                      className="flex-1 min-w-[45%] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                      onClick={() => handleButtonClick("Brainstorm")}
-                    >
-                      <FaWandMagicSparkles className="mr-1 flex-shrink-0" />
-                      <span className="truncate">Brainstorm</span>
-                    </button>
-                    <button
-                      className="flex-1 min-w-[45%] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                      onClick={() => handleButtonClick("Summarize")}
-                    >
-                      <IoSearchOutline className="mr-1 flex-shrink-0" />
-                      <span className="truncate">Summarize</span>
-                    </button>
-                    <button
-                      className="flex-1 min-w-[45%] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                      onClick={() => handleButtonClick("Create Workflow")}
-                    >
-                      <MdOutlineWork className="mr-1 flex-shrink-0" />
-                      <span className="truncate">Create Workflow</span>
-                    </button>
-                  </div>
-
-                  <button
-                    className="flex items-center justify-center py-2 px-4 border border-gray-300 rounded-full text-sm mt-2"
-                    onClick={openUpgradeModal}
-                  >
-                    More
-                  </button>
-
-                  <div className="mt-auto px-2 py-4 w-full text-xs text-gray-400 text-center fixed bottom-12 left-0 right-0">
-                    CTC generation Engine can make mistakes. Consider checking important information.
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6 flex flex-col">
-                  {messages.map((message) => (
-                    <div
-                      key={message.id}
-                      className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} mb-2`}
-                    >
-                      <div
-                        className={`max-w-[85%] sm:max-w-[75%] p-3 sm:p-4 rounded-lg ${
-                          message.role === "user" ? "bg-purple-500 text-white" : "bg-white border border-gray-200"
-                        }`}
-                      >
-                        <ReactMarkdown
-                          components={{
-                            p: ({ node, ...props }) => <p className="break-words" {...props} />,
-                          }}
-                        >
-                          {message.content}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex justify-start">
-                      <div className="max-w-3/4 p-4 rounded-lg bg-white border border-gray-200">
-                        <div className="flex space-x-2">
-                          <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.2s" }}
-                          ></div>
-                          <div
-                            className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                            style={{ animationDelay: "0.4s" }}
-                          ></div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  <div ref={messagesEndRef} />
-                  <div className="flex justify-center space-x-4 mt-4">
-                    <button
-                      className="flex items-center justify-center text-gray-500 hover:text-gray-700"
-                      onClick={() => handleButtonClick("Rewrite")}
-                    >
-                      <IoArrowUpOutline className="mr-1" />
-                      Rewrite
-                    </button>
-                    <button
-                      className="flex items-center justify-center text-gray-500 hover:text-gray-700"
-                      onClick={() => handleButtonClick("Take Notes")}
-                    >
-                      <IoShareSocialOutline className="mr-1" />
-                      Take Notes
-                    </button>
-                    <button
-                      className="flex items-center justify-center text-gray-500 hover:text-gray-700"
-                      onClick={() => handleButtonClick("Create Workflow")}
-                    >
-                      <MdOutlineWork className="mr-1" />
-                      Workflow
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Input Area - Only show when there are messages */}
-            {messages.length > 0 && (
-              <div className="bg-white p-4 border-t border-gray-200">
-                <form onSubmit={onSubmit} className="flex items-center">
-                  <div className="flex-1 relative">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={handleInputChange}
-                      placeholder="Message CTC Generation Engine..."
-                      className="w-full border border-gray-300 rounded-lg py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                      <IoAttachOutline />
-                    </button>
-                  </div>
-                  <button
-                    type="submit"
-                    className={`ml-2 bg-purple-500 text-white rounded-full p-3 transition-opacity duration-300 ${input ? "opacity-100" : "opacity-50"}`}
-                    disabled={!input.trim()}
-                  >
-                    <IoArrowUpOutline />
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-
-          {/* Bottom Navigation */}
-          <div className="bg-white border-t border-gray-200 py-2 px-4 flex justify-around">
-            <button className="flex flex-col items-center justify-center text-purple-500">
-              <IoHomeOutline className="text-xl" />
-              <span className="text-xs mt-1">Home</span>
-            </button>
-            <button className="flex flex-col items-center justify-center text-gray-500" onClick={toggleLibrary}>
-              <BiLibrary className="text-xl" />
-              <span className="text-xs mt-1">Library</span>
-            </button>
-            <button className="flex flex-col items-center justify-center text-gray-500" onClick={toggleWorkflow}>
-              <MdOutlineWork className="text-xl" />
-              <span className="text-xs mt-1">Workflow</span>
-            </button>
-            <button className="flex flex-col items-center justify-center text-gray-500" onClick={toggleSupportChat}>
-              <MdSupport className="text-xl" />
-              <span className="text-xs mt-1">Support</span>
-            </button>
-          </div>
-        </div>
-        <HowToUseModal isOpen={isHowToUseModalOpen} onClose={() => setIsHowToUseModalOpen(false)} />
-        <SupportChat isOpen={isSupportChatOpen} onClose={() => setIsSupportChatOpen(false)} />
-        <ShareAndGetPaid isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
-        <Library isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
-        <WorkflowModal
-          isOpen={isWorkflowOpen}
-          onClose={() => setIsWorkflowOpen(false)}
-          initialContent={workflowContent}
-        />
-      </>
-    )
-  }
-
-  // Desktop Layout (Original)
   return (
-    <>
-      <Head>
-        <style>{`
-          .toggle-checkbox:checked {
-            right: 0;
-            border-color: #805AD5;
-          }
-          .toggle-checkbox:checked + .toggle-label {
-            background-color: #805AD5;
-          }
-        `}</style>
-      </Head>
-      <div className="flex flex-col h-screen bg-gray-50 md:flex-row">
-        {/* Sidebar */}
-        <div className="w-full md:w-64 bg-white border-r border-gray-200 p-4 flex flex-col">
-          <div className="mb-6">
-            <button className="w-full bg-purple-500 text-white rounded-full py-2 px-4 flex items-center justify-center">
-              <span className="mr-2">+</span> Add
-            </button>
-          </div>
-
-          <nav className="flex-1">
-            <ul className="space-y-1">
-              <li>
-                <a href="#" className="flex items-center px-4 py-2 text-gray-700 bg-gray-200 rounded-md">
-                  <IoHomeOutline className="mr-3" />
-                  Home
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    toggleLibrary()
-                  }}
-                >
-                  <BiLibrary className="mr-3" />
-                  Library
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    toggleWorkflow()
-                  }}
-                >
-                  <MdOutlineWork className="mr-3" />
-                  Workflows
-                </a>
-              </li>
-            </ul>
-          </nav>
-
-          <div className="mt-auto">
-            <ul className="space-y-1">
-              <li>
-                <a
-                  href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setIsHowToUseModalOpen(true)
-                  }}
-                >
-                  <IoInformationCircleOutline className="mr-3" />
-                  How to use 
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setIsSettingsModalOpen(true)
-                  }}
-                >
-                  <MdSettingsApplications className="mr-3" />
-                  AI settings
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    toggleSupportChat()
-                  }}
-                >
-                  <MdSupport className="mr-3" />
-                  Support
-                </a>
-              </li>
-              <li>
-                <a
-                  href="#"
-                  className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    setIsShareModalOpen(true)
-                  }}
-                >
-                  <IoShareSocialOutline className="mr-3" />
-                  Share & get paid
-                </a>
-              </li>
-              <li className="px-4 py-2 text-xs text-gray-500">
-                1/10 monthly credits used
-                <div className="w-full bg-gray-200 rounded-full h-1 mt-1">
-                  <div className="bg-purple-500 h-1 rounded-full" style={{ width: "10%" }}></div>
-                </div>
-              </li>
-              <li>
-                <button
-                  className="w-full flex items-center justify-center py-2 px-6 text-lg bg-purple-500 text-white rounded-full hover:bg-purple-600"
-                  onClick={openUpgradeModal}
-                >
-                  <RiSparklingLine className="mr-2" />
-                  Upgrade
-                </button>
-              </li>
-            </ul>
-
-            <div className="flex items-center mt-4 pt-4 border-t">
-              <div className="w-6 h-6 rounded-md bg-gray-700 flex items-center justify-center text-white text-xs">
-                R
-              </div>
-              <span className="ml-2 text-sm">Rasheq...</span>
-              <div className="ml-auto flex">
-                <IoCloseOutline className="text-gray-500 mx-1" />
-                <BsThreeDots className="text-gray-500 mx-1" />
-              </div>
+    <div className="min-h-screen bg-white">
+      {/* Header */}
+      <header className="sticky top-0 z-50 bg-white shadow-sm">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+            className="flex items-center"
+          >
+            <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center mr-3">
+              <Brain className="text-white h-6 w-6" />
             </div>
-          </div>
+            <h1 className="text-xl font-bold text-gray-800">CancerClassify</h1>
+          </motion.div>
+          
+          <motion.nav 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <ul className="flex space-x-8">
+              <li><a href="#home" className="text-gray-700 hover:text-purple-600 transition-colors">Home</a></li>
+              <li><a href="#about" className="text-gray-700 hover:text-purple-600 transition-colors">About</a></li>
+              <li><a href="#features" className="text-gray-700 hover:text-purple-600 transition-colors">Features</a></li>
+              <li><a href="#bot" className="text-gray-700 hover:text-purple-600 transition-colors">Bot</a></li>
+              <li><a href="#contact" className="text-gray-700 hover:text-purple-600 transition-colors">Contact</a></li>
+            </ul>
+          </motion.nav>
         </div>
+      </header>
 
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="bg-white p-4 flex justify-between items-center border-b border-gray-200">
-            <div></div>
-            <button
-              className="py-2 px-6 text-lg bg-purple-500 text-white rounded-full flex items-center hover:bg-purple-600"
-              onClick={openUpgradeModal}
+      {/* Section 1 - Hero */}
+      <section id="home" className="py-20 bg-gradient-to-br from-purple-50 to-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="flex flex-col md:flex-row items-center justify-between"
+            initial="hidden"
+            animate={isVisible ? "visible" : "hidden"}
+            variants={staggerContainer}
+          >
+            <motion.div 
+              className="md:w-1/2 mb-10 md:mb-0"
+              variants={fadeIn}
+              transition={{ duration: 0.6 }}
             >
-              <RiSparklingLine className="mr-1" />
-              Upgrade
-            </button>
-          </header>
-
-          {/* Chat Area */}
-          <div className="flex-1 p-4 overflow-y-auto">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center">
-                <h1 className="text-2xl font-semibold text-gray-800 mb-12">What can I help you with, Rasheq?</h1>
-
-                <div className="bg-white rounded-lg shadow-sm w-full max-w-2xl p-2 mb-6">
-                  <div className="text-gray-600 mb-4 text-center">
-                    Chat with <span className="font-bold text-purple-500 animate-pulse">CTC Generation Engine</span>
+              <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-4">
+                Advanced Cancer <span className="text-purple-600">Classification</span> System
+              </h1>
+              <p className="text-lg text-gray-600 mb-8">
+                Our AI-powered system accurately classifies cancer types and provides personalized treatment recommendations to help healthcare professionals make informed decisions.
+              </p>
+              <div className="flex space-x-4">
+                <Link href="/cancer-page">
+                  <Button className="bg-purple-600 hover:bg-purple-700">
+                    Get Started
+                  </Button>
+                </Link>
+                <Link href="/documents">
+                  <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
+                    Learn More
+                  </Button>
+                </Link>
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="md:w-1/2"
+              variants={fadeIn}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-lg blur opacity-30"></div>
+                <div className="relative bg-white p-6 rounded-lg shadow-xl">
+                  <div className="w-full h-64 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Brain className="h-24 w-24 text-purple-500" />
                   </div>
-
-                  <form onSubmit={onSubmit} className="flex flex-col md:flex-row space-x-0 md:space-x-2">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={handleInputChange}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Message CTC Generation Engine..."
-                      className="flex-1 border border-gray-300 rounded-lg py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <button
-                      type="button"
-                      className="flex items-center py-1 px-4 border border-gray-300 rounded-full text-sm mt-2 md:mt-0 hover:bg-purple-500 hover:text-white"
-                    >
-                      <IoAttachOutline className="mr-2" />
-                      Attach
-                    </button>
-                    <button
-                      type="submit"
-                      className={`ml-2 bg-purple-500 text-white rounded-full w-12 h-12 flex items-center justify-center transition-opacity duration-300 ${input ? "opacity-100" : "opacity-50"}`}
-                    >
-                      <IoArrowUpOutline />
-                    </button>
-                  </form>
-                </div>
-
-                <div className="flex flex-wrap gap-3 w-full max-w-2xl">
-                  <button
-                    className="flex-1 min-w-[calc(25%-12px)] md:min-w-[calc(25%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Research")}
-                  >
-                    <IoSearchOutline className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Research</span>
-                  </button>
-                  <button
-                    className="flex-1 min-w-[calc(25%-12px)] md:min-w-[calc(25%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Brainstorm")}
-                  >
-                    <FaWandMagicSparkles className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Brainstorm</span>
-                  </button>
-                  <button
-                    className="flex-1 min-w-[calc(25%-12px)] md:min-w-[calc(25%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Summarize")}
-                  >
-                    <IoSearchOutline className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Summarize</span>
-                  </button>
-                  <button
-                    className="flex-1 min-w-[calc(25%-12px)] md:min-w-[calc(25%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Create Workflow")}
-                  >
-                    <MdOutlineWork className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Create Workflow</span>
-                  </button>
-                  <button
-                    className="flex-1 min-w-[calc(33.333%-12px)] md:min-w-[calc(33.333%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Help me write")}
-                  >
-                    <IoSearchOutline className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Help me write</span>
-                  </button>
-                  <button
-                    className="flex-1 min-w-[calc(33.333%-12px)] md:min-w-[calc(33.333%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Code")}
-                  >
-                    <IoSearchOutline className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Code</span>
-                  </button>
-                  <button
-                    className="flex-1 min-w-[calc(33.333%-12px)] md:min-w-[calc(33.333%-12px)] flex items-center justify-center py-2 px-3 border border-gray-300 rounded-full text-sm hover:bg-purple-500 hover:text-white"
-                    onClick={() => handleButtonClick("Latest Discoveries")}
-                  >
-                    <IoSearchOutline className="mr-1 flex-shrink-0" />
-                    <span className="truncate">Latest Discoveries</span>
-                  </button>
+                  <div className="mt-4">
+                    <h3 className="text-lg font-semibold text-gray-800">AI-Powered Analysis</h3>
+                    <p className="text-gray-600">Our system uses advanced machine learning algorithms to analyze patient data and provide accurate cancer classifications.</p>
+                  </div>
                 </div>
               </div>
-            ) : (
-              <div className="space-y-6 flex flex-col">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"} mb-2`}
-                  >
-                    <div
-                      className={`max-w-[85%] sm:max-w-[75%] p-3 sm:p-4 rounded-lg ${
-                        message.role === "user" ? "bg-purple-500 text-white" : "bg-white border border-gray-200"
-                      }`}
-                    >
-                      <ReactMarkdown
-                        components={{
-                          p: ({ node, ...props }) => <p className="break-words" {...props} />,
-                        }}
-                      >
-                        {message.content}
-                      </ReactMarkdown>
+            </motion.div>
+          </motion.div>
+        </div>
+        <motion.div 
+          className="flex justify-center mt-16"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 1 }}
+        >
+          <Link href="/documents" className="flex flex-col items-center text-purple-600">
+            <span className="text-sm mb-1">Learn More</span>
+            <ChevronDown className="animate-bounce" />
+          </Link>
+        </motion.div>
+      </section>
+
+      {/* Section 2 - About Us */}
+      <section id="about" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">About Us</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              We are a team of medical professionals, data scientists, and AI experts dedicated to improving cancer diagnosis and treatment through innovative technology.
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5 }}
+              className="bg-purple-50 p-8 rounded-lg"
+            >
+              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+                <Users className="text-white h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-center mb-4">Expert Team</h3>
+              <p className="text-gray-600 text-center">
+                Our multidisciplinary team combines expertise in oncology, data science, and artificial intelligence to create cutting-edge solutions.
+              </p>
+            </motion.div>
+            
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5 }}
+              className="bg-purple-50 p-8 rounded-lg"
+            >
+              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+                <Brain className="text-white h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-center mb-4">Advanced Technology</h3>
+              <p className="text-gray-600 text-center">
+                We leverage state-of-the-art machine learning algorithms and medical research to provide accurate cancer classifications.
+              </p>
+            </motion.div>
+            
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5 }}
+              className="bg-purple-50 p-8 rounded-lg"
+            >
+              <div className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center mb-6 mx-auto">
+                <Database className="text-white h-8 w-8" />
+              </div>
+              <h3 className="text-xl font-semibold text-center mb-4">Comprehensive Data</h3>
+              <p className="text-gray-600 text-center">
+                Our system is trained on extensive medical datasets to ensure high accuracy and reliability in cancer classification.
+              </p>
+            </motion.div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Section 3 - Features */}
+      <section id="features" className="py-20 bg-gradient-to-br from-purple-50 to-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Key Features</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              Our cancer classification system offers a range of features designed to improve diagnosis accuracy and treatment planning.
+            </p>
+          </motion.div>
+          
+          <div className="flex flex-col md:flex-row items-center">
+            <motion.div 
+              className="md:w-1/2 mb-10 md:mb-0 order-2 md:order-1"
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="space-y-6">
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold">1</span>
                     </div>
                   </div>
-                ))}
-                {isTyping && (
-                  <div className="flex justify-start">
-                    <div className="max-w-3/4 p-4 rounded-lg bg-white border border-gray-200">
-                      <div className="flex space-x-2">
-                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.2s" }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                          style={{ animationDelay: "0.4s" }}
-                        ></div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Accurate Classification</h3>
+                    <p className="text-gray-600">
+                      Our system accurately classifies cancer types based on patient data, helping doctors make informed decisions.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold">2</span>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Personalized Treatment Plans</h3>
+                    <p className="text-gray-600">
+                      Receive tailored treatment recommendations based on the specific cancer type and patient characteristics.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold">3</span>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2">Real-time Analysis</h3>
+                    <p className="text-gray-600">
+                      Get instant results and analysis, allowing for quicker treatment decisions and improved patient outcomes.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+            
+            <motion.div 
+              className="md:w-1/2 order-1 md:order-2"
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="relative">
+                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-500 rounded-lg blur opacity-30"></div>
+                <div className="relative bg-white p-6 rounded-lg shadow-xl">
+                  <div className="w-full h-64 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <div className="text-center">
+                      <Bot className="h-24 w-24 text-purple-500 mx-auto mb-4" />
+                      <p className="text-purple-700 font-medium">AI-Powered Classification</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 4 - Bot Functionality */}
+      <section id="bot" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Bot Functionality</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              Our AI-powered bot provides comprehensive cancer analysis and personalized treatment recommendations.
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="grid grid-cols-1 lg:grid-cols-2 gap-12"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5 }}
+            >
+              <Card className="p-6 h-full">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">How It Works</h3>
+                <div className="space-y-8">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 font-bold">1</span>
                       </div>
                     </div>
+                    <div className="ml-4">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-1">Data Processing</h4>
+                      <p className="text-gray-600">
+                        The bot collects and processes patient data, including medical history, test results, and imaging data.
+                      </p>
+                    </div>
                   </div>
-                )}
-                <div ref={messagesEndRef} />
-                <div className="flex justify-center space-x-4 mt-4">
-                  <button
-                    className="flex items-center justify-center text-gray-500 hover:text-gray-700"
-                    onClick={() => handleButtonClick("Rewrite")}
-                  >
-                    <IoArrowUpOutline className="mr-1" />
-                    Rewrite
-                  </button>
-                  <button
-                    className="flex items-center justify-center text-gray-500 hover:text-gray-700"
-                    onClick={() => handleButtonClick("Take Notes")}
-                  >
-                    <IoShareSocialOutline className="mr-1" />
-                    Take Notes
-                  </button>
-                  <button
-                    className="flex items-center justify-center text-gray-500 hover:text-gray-700"
-                    onClick={() => handleButtonClick("Create Workflow")}
-                  >
-                    <MdOutlineWork className="mr-1" />
-                    Create Workflow
-                  </button>
+                  
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 font-bold">2</span>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-1">Cancer Analysis</h4>
+                      <p className="text-gray-600">
+                        Using advanced algorithms, the bot analyzes the data to classify the cancer type with high accuracy.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                        <span className="text-purple-600 font-bold">3</span>
+                      </div>
+                    </div>
+                    <div className="ml-4">
+                      <h4 className="text-lg font-semibold text-gray-800 mb-1">Treatment Recommendation</h4>
+                      <p className="text-gray-600">
+                        Based on the classification, the bot provides a detailed treatment plan tailored to the patient's specific condition.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Input Area - Only show when there are messages */}
-          {messages.length > 0 && (
-            <div className="bg-white p-4 border-t border-gray-200">
-              <form onSubmit={onSubmit} className="flex items-center">
-                <div className="flex-1 relative">
-                  <input
-                    type="text"
-                    value={input}
-                    onChange={handleInputChange}
-                    placeholder="Message CTC Generation Engine..."
-                    className="w-full border border-gray-300 rounded-lg py-3 px-4 pr-10 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <button type="button" className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                    <IoAttachOutline />
-                  </button>
+              </Card>
+            </motion.div>
+            
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0.2 }}
+            >
+              <Card className="p-6 h-full">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Detailed Analysis Output</h3>
+                <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <div className="space-y-6">
+                    <div>
+                      <h4 className="text-lg font-semibold text-purple-700 mb-2">1. Cancer Classification</h4>
+                      <ul className="list-disc list-inside text-gray-600 ml-2 space-y-1">
+                        <li>Primary detection: Cancer Type</li>
+                        <li>Key findings from the data</li>
+                        <li>Confidence level assessment</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-lg font-semibold text-purple-700 mb-2">2. Step-by-Step Treatment Plan</h4>
+                      <ul className="list-disc list-inside text-gray-600 ml-2 space-y-1">
+                        <li>Step 1: Initial treatment approach</li>
+                        <li>Step 2: Follow-up procedures</li>
+                        <li>Step 3: Long-term management</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-lg font-semibold text-purple-700 mb-2">3. What to Expect</h4>
+                      <ul className="list-disc list-inside text-gray-600 ml-2 space-y-1">
+                        <li>Typical timeline for treatment</li>
+                        <li>Common side effects and management</li>
+                        <li>Success rates and prognosis</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-lg font-semibold text-purple-700 mb-2">4. Important Considerations</h4>
+                      <ul className="list-disc list-inside text-gray-600 ml-2 space-y-1">
+                        <li>Key decisions for the patient</li>
+                        <li>Lifestyle recommendations</li>
+                        <li>Support resources available</li>
+                      </ul>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-lg font-semibold text-purple-700 mb-2">5. Next Steps</h4>
+                      <ul className="list-disc list-inside text-gray-600 ml-2 space-y-1">
+                        <li>Immediate actions to take</li>
+                        <li>Questions to ask your doctor</li>
+                        <li>How to prepare for treatment</li>
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-                <button
-                  type="submit"
-                  className={`ml-2 bg-purple-500 text-white rounded-full p-3 transition-opacity duration-300 ${input ? "opacity-100" : "opacity-50"}`}
-                  disabled={!input.trim()}
-                >
-                  <IoArrowUpOutline />
-                </button>
-              </form>
-              <div className="mt-2 text-xs text-gray-400 text-center">
-                 CTC Generation Engine can make mistakes. Consider checking important information.
-              </div>
-            </div>
-          )}
+              </Card>
+            </motion.div>
+          </motion.div>
         </div>
-      </div>
-      <HowToUseModal isOpen={isHowToUseModalOpen} onClose={() => setIsHowToUseModalOpen(false)} />
-      <SettingsModal isOpen={isSettingsModalOpen} onClose={() => setIsSettingsModalOpen(false)} />
-      <SupportChat isOpen={isSupportChatOpen} onClose={() => setIsSupportChatOpen(false)} />
-      <ShareAndGetPaid isOpen={isShareModalOpen} onClose={() => setIsShareModalOpen(false)} />
-      <Library isOpen={isLibraryOpen} onClose={() => setIsLibraryOpen(false)} />
-      <WorkflowModal
-        isOpen={isWorkflowOpen}
-        onClose={() => setIsWorkflowOpen(false)}
-        initialContent={workflowContent}
-      />
-      {isUpgradeModalOpen && (
-        <div className="fixed inset-0 bg-foreground/30 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all duration-300">
-          <div
-            className={`bg-white rounded-xl max-w-md w-full p-6 relative transform transition-all duration-300 ${upgradeModalAnimation} translate-y-4 opacity-0`}
+      </section>
+
+      {/* Section 5 - Additional Content */}
+      <section id="contact" className="py-20 bg-gradient-to-br from-purple-50 to-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
           >
-            <button onClick={closeUpgradeModal} className="absolute top-4 right-4 text-gray-500 hover:text-gray-700">
-              <IoCloseOutline className="text-xl" />
-            </button>
-
-            <div className="text-center mb-6">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-purple-100 mb-4">
-                <RiSparklingLine className="text-3xl text-purple-500" />
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Advanced Cancer Detection</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              Our system is continuously improving to provide the most accurate cancer detection and classification available.
+            </p>
+          </motion.div>
+          
+          <div className="max-w-4xl mx-auto">
+            <motion.div 
+              className="bg-white rounded-lg shadow-xl overflow-hidden"
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2">
+                <div className="p-8 md:p-12">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-4">Get Started Today</h3>
+                  <p className="text-gray-600 mb-6">
+                    Join healthcare professionals worldwide who are using our cancer classification system to improve patient outcomes.
+                  </p>
+                  <ul className="space-y-3 mb-8">
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      </div>
+                      <span className="text-gray-700">Accurate cancer classification</span>
+                    </li>
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      </div>
+                      <span className="text-gray-700">Personalized treatment plans</span>
+                    </li>
+                    <li className="flex items-center">
+                      <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-3">
+                        <svg className="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                        </svg>
+                      </div>
+                      <span className="text-gray-700">Continuous system improvements</span>
+                    </li>
+                  </ul>
+                  <Link href="/demo-request">
+                    <Button className="bg-purple-600 hover:bg-purple-700 w-full">
+                      Request a Demo
+                    </Button>
+                  </Link>
+                </div>
+                
+                <div className="bg-purple-600 p-8 md:p-12 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <h3 className="text-2xl font-bold mb-4">Contact Us</h3>
+                    <p className="mb-6">Have questions about our cancer classification system?</p>
+                    <Link href="/support">
+                      <Button variant="outline" className="border-white text-purple-600 hover:bg-purple-700 hover:text-white hover:border-transparent">
+                        Get in Touch <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-xl font-bold text-gray-900">Upgrade to Pro</h3>
-              <p className="text-gray-500 mt-2">Get unlimited access to all premium features</p>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <div className="flex items-center">
-                <div className="bg-purple-100 rounded-full p-2 mr-3">
-                  <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold">Unlimited messages</p>
-                  <p className="text-sm text-gray-500">Chat as much as you want</p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <div className="bg-purple-100 rounded-full p-2 mr-3">
-                  <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold">Priority access</p>
-                  <p className="text-sm text-gray-500">No waiting during peak times</p>
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <div className="bg-purple-100 rounded-full p-2 mr-3">
-                  <svg className="w-5 h-5 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                </div>
-                <div>
-                  <p className="font-bold">Advanced features</p>
-                  <p className="text-sm text-gray-500">Access to all premium tools</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-4 rounded-lg mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-bold">Monthly</span>
-                <div className="relative inline-block w-10 mr-2 align-middle select-none">
-                  <input
-                    type="checkbox"
-                    name="toggle"
-                    id="toggle-desktop"
-                    className="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer"
-                  />
-                  <label
-                    htmlFor="toggle-desktop"
-                    className="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"
-                  ></label>
-                </div>
-                <span className="text-sm font-bold">
-                  Yearly <span className="text-green-500">-20%</span>
-                </span>
-              </div>
-              <div className="text-center">
-                <span className="text-3xl font-bold">$19</span>
-                <span className="text-gray-500">/month</span>
-              </div>
-            </div>
-
-            <button className="w-full py-3 px-4 bg-purple-500 hover:bg-purple-600 text-white font-medium rounded-lg transition-colors duration-200">
-              Upgrade Now
-            </button>
-
-            <p className="text-xs text-center text-gray-500 mt-4">Cancel anytime. No questions asked.</p>
+            </motion.div>
           </div>
         </div>
-      )}
-    </>
-  )
+      </section>
+
+      {/* Section 6 - Blog Section */}
+      <section id="blog" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Latest From Our Blog</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              Stay updated with the latest insights, research, and updates in cancer classification and treatment
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-3 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            {/* Blog Post 1 */}
+            <motion.article 
+              variants={fadeIn}
+              transition={{ duration: 0.5 }}
+              className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="h-48 bg-purple-100 flex items-center justify-center">
+                <span className="text-3xl font-bold text-purple-600">R</span>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center text-sm text-gray-500 mb-3">
+                  <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Research
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    8 min read
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-purple-600 transition-colors">
+                  Advances in AI-Powered Cancer Detection
+                </h3>
+                <p className="text-gray-600 mb-6 line-clamp-3">
+                  How machine learning algorithms are revolutionizing early cancer detection and improving patient outcomes.
+                </p>
+              </div>
+            </motion.article>
+            
+            {/* Blog Post 2 */}
+            <motion.article 
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="h-48 bg-blue-100 flex items-center justify-center">
+                <span className="text-3xl font-bold text-purple-600">E</span>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center text-sm text-gray-500 mb-3">
+                  <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Education
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    12 min read
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-purple-600 transition-colors">
+                  Understanding Different Types of Cancer
+                </h3>
+                <p className="text-gray-600 mb-6 line-clamp-3">
+                  An in-depth look at the major categories of cancer, their characteristics, and how they're classified by modern medicine.
+                </p>
+              </div>
+            </motion.article>
+            
+            {/* Blog Post 3 */}
+            <motion.article 
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="bg-white rounded-lg shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="h-48 bg-green-100 flex items-center justify-center">
+                <span className="text-3xl font-bold text-purple-600">T</span>
+              </div>
+              <div className="p-6">
+                <div className="flex items-center text-sm text-gray-500 mb-3">
+                  <span className="bg-purple-100 text-purple-700 px-2 py-1 rounded-full text-xs font-medium">
+                    Treatment
+                  </span>
+                  <span className="mx-2">•</span>
+                  <span className="flex items-center">
+                    <Clock className="h-4 w-4 mr-1" />
+                    10 min read
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-gray-800 mb-3 hover:text-purple-600 transition-colors">
+                  The Future of Personalized Cancer Treatment
+                </h3>
+                <p className="text-gray-600 mb-6 line-clamp-3">
+                  How AI and genetic analysis are enabling truly personalized treatment plans that improve efficacy and reduce side effects.
+                </p>
+              </div>
+            </motion.article>
+          </motion.div>
+          
+          <div className="text-center mt-12">
+            <Link href="/blog-page">
+              <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
+                View All Articles <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 7 - Case Studies */}
+      <section id="case-studies" className="py-20 bg-gradient-to-br from-purple-50 to-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Success Stories</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              Real-world examples of how our cancer classification system is improving patient outcomes
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="grid grid-cols-1 md:grid-cols-2 gap-8"
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+          >
+            {/* Case Study 1 */}
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5 }}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3">
+                <div className="bg-pink-600 p-6 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <div className="text-sm font-medium mb-1">CASE STUDY</div>
+                    <div className="text-xl font-bold">2023</div>
+                  </div>
+                </div>
+                <div className="col-span-2 p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Improving Breast Cancer Detection Accuracy by 35%</h3>
+                  <p className="text-purple-600 font-medium mb-4">Memorial Cancer Institute</p>
+                  <p className="text-gray-600 mb-6 line-clamp-3">
+                    Implementation of our AI-based classification system resulted in 35% reduction in false positives and 22% increase in early detection rates.
+                  </p>
+                  <Link href="/case-study/1">
+                    <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50 text-sm px-4">
+                      Read Case Study <ArrowRight className="ml-2 h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+            
+            {/* Case Study 2 */}
+            <motion.div 
+              variants={fadeIn}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="bg-white rounded-lg shadow-md overflow-hidden"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3">
+                <div className="bg-blue-600 p-6 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <div className="text-sm font-medium mb-1">CASE STUDY</div>
+                    <div className="text-xl font-bold">2022</div>
+                  </div>
+                </div>
+                <div className="col-span-2 p-6">
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">Accelerating Lung Cancer Treatment Planning by 60%</h3>
+                  <p className="text-purple-600 font-medium mb-4">Pacific Northwest Oncology Center</p>
+                  <p className="text-gray-600 mb-6 line-clamp-3">
+                    Integration of our system with their existing EMR infrastructure reduced time from initial scan to treatment plan by 60%.
+                  </p>
+                  <Link href="/case-study/2">
+                    <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50 text-sm px-4">
+                      Read Case Study <ArrowRight className="ml-2 h-3 w-3" />
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+          
+          <div className="text-center mt-12">
+            <Link href="/case-study">
+              <Button variant="outline" className="border-purple-600 text-purple-600 hover:bg-purple-50">
+                View All Case Studies <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Section 8 - Support */}
+      <section id="support-section" className="py-20 bg-white">
+        <div className="container mx-auto px-4">
+          <motion.div 
+            className="text-center mb-16"
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-3xl font-bold text-gray-800 mb-4">Need Help?</h2>
+            <div className="w-24 h-1 bg-purple-600 mx-auto mb-8"></div>
+            <p className="max-w-3xl mx-auto text-gray-600">
+              We're here to support you with any questions or issues related to our cancer classification system
+            </p>
+          </motion.div>
+          
+          <motion.div 
+            className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg overflow-hidden"
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2">
+              <div className="p-8 md:p-12">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Contact Support</h3>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Our Support Team</h4>
+                    <p className="text-gray-600 mb-6">
+                      Our dedicated support team is available to help you with technical issues, account questions, and more.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-800 mb-2">Contact Information</h4>
+                    <ul className="space-y-3 text-gray-600">
+                      <li className="flex items-start">
+                        <svg className="h-6 w-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                        </svg>
+                        <span>rasheq53@gmail.com</span>
+                      </li>
+                      <li className="flex items-start">
+                        <svg className="h-6 w-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                        </svg>
+                        <span>8902325887</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+                
+                <div className="mt-8">
+                  <Link href="/support">
+                    <Button className="bg-purple-600 hover:bg-purple-700 w-full">
+                      Visit Support Center
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+              
+              <div className="bg-purple-50 p-8 md:p-12">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6">Frequently Asked Questions</h3>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-1">How accurate is the classification system?</h4>
+                    <p className="text-gray-600 text-sm">
+                      Our system has demonstrated an average accuracy of 93% across all cancer types in clinical trials.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-1">Is my medical data secure?</h4>
+                    <p className="text-gray-600 text-sm">
+                      Yes, we implement comprehensive security measures including end-to-end encryption and access controls.
+                    </p>
+                  </div>
+                  
+                  <div>
+                    <h4 className="text-md font-semibold text-gray-800 mb-1">Can it integrate with our EMR systems?</h4>
+                    <p className="text-gray-600 text-sm">
+                      Yes, our system is designed with interoperability in mind and can connect with most major EMR systems.
+                    </p>
+                  </div>
+                  
+                  <Link href="/support" className="text-purple-600 font-medium hover:text-purple-700 flex items-center mt-4">
+                    View all FAQs
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-12">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center mb-4">
+                <div className="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center mr-3">
+                  <Brain className="text-white h-6 w-6" />
+                </div>
+                <h2 className="text-xl font-bold">CancerClassify</h2>
+              </div>
+              <p className="text-gray-400 mb-4">
+                Advanced cancer classification and treatment recommendation system powered by AI.
+              </p>
+              <div className="flex space-x-4">
+                <a href="https://www.linkedin.com/in/mohamedrasheq" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                  </svg>
+                </a>
+                <a href="https://x.com/mohamedrasheq" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8.29 20.251c7.547 0 11.675-6.253 11.675-11.675 0-.178 0-.355-.012-.53A8.348 8.348 0 0022 5.92a8.19 8.19 0 01-2.357.646 4.118 4.118 0 001.804-2.27 8.224 8.224 0 01-2.605.996 4.107 4.107 0 00-6.993 3.743 11.65 11.65 0 01-8.457-4.287 4.106 4.106 0 001.27 5.477A4.072 4.072 0 012.8 9.713v.052a4.105 4.105 0 003.292 4.022 4.095 4.095 0 01-1.853.07 4.108 4.108 0 003.834 2.85A8.233 8.233 0 012 18.407a11.616 11.616 0 006.29 1.84" />
+                  </svg>
+                </a>
+                <a href="https://wa.me/8902325887" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors">
+                  <svg className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+                  </svg>
+                </a>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+              <ul className="space-y-2">
+                <li><a href="#home" className="text-gray-400 hover:text-white transition-colors">Home</a></li>
+                <li><a href="#about" className="text-gray-400 hover:text-white transition-colors">About Us</a></li>
+                <li><a href="#features" className="text-gray-400 hover:text-white transition-colors">Features</a></li>
+                <li><a href="#bot" className="text-gray-400 hover:text-white transition-colors">Bot Functionality</a></li>
+                <li><a href="#contact" className="text-gray-400 hover:text-white transition-colors">Contact</a></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Resources</h3>
+              <ul className="space-y-2">
+                <li><Link href="/documents" className="text-gray-400 hover:text-white transition-colors">Documentation</Link></li>
+                <li><span className="text-gray-400">API Reference <span className="ml-2 text-xs bg-purple-200 text-purple-800 px-2 py-1 rounded-full">$5-$15/mo</span></span></li>
+                <li><Link href="/blog-page" className="text-gray-400 hover:text-white transition-colors">Blog</Link></li>
+                <li><Link href="/case-study" className="text-gray-400 hover:text-white transition-colors">Case Studies</Link></li>
+                <li><Link href="/support" className="text-gray-400 hover:text-white transition-colors">Support</Link></li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Contact</h3>
+              <ul className="space-y-2 text-gray-400">
+                <li className="flex items-start">
+                  <svg className="h-6 w-6 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                  </svg>
+                  <span>10/c Trichy</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="h-6 w-6 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                  </svg>
+                  <span>rasheq53@gmail.com</span>
+                </li>
+                <li className="flex items-start">
+                  <svg className="h-6 w-6 mr-2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                  </svg>
+                  <span>8902325887</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-gray-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center">
+            <p className="text-gray-400 text-sm mb-4 md:mb-0">
+              &copy; {new Date().getFullYear()} CancerClassify. All rights reserved.
+            </p>
+            <div className="flex space-x-6">
+              <Link href="/privacy-policy" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</Link>
+              <Link href="/terms-of-service" className="text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</Link>
+              <Link href="/cookie-policy" className="text-gray-400 hover:text-white text-sm transition-colors">Cookie Policy</Link>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  )   
 }
+
 
